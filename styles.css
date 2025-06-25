@@ -4464,6 +4464,35 @@ spline-viewer.planet-3D {
     display: none;
     z-index: 0;
     pointer-events: none;
+    overflow: hidden;
+}
+
+/* Enhanced mobile fallback for better visibility */
+@media (max-width: 768px) {
+    .mobile-3d-fallback {
+        top: -10%;
+        right: -10%;
+        width: 120%;
+        height: 120%;
+    }
+    
+    .planet-1 {
+        width: 50px;
+        height: 50px;
+        box-shadow: 0 0 25px rgba(124, 233, 230, 0.5);
+    }
+    
+    .planet-2 {
+        width: 35px;
+        height: 35px;
+        box-shadow: 0 0 20px rgba(124, 233, 230, 0.4);
+    }
+    
+    .planet-3 {
+        width: 25px;
+        height: 25px;
+        box-shadow: 0 0 15px rgba(124, 233, 230, 0.3);
+    }
 }
 
 .animated-planets {
