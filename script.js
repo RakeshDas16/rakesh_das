@@ -1416,6 +1416,18 @@ document.addEventListener('DOMContentLoaded', function() {
     addMagneticEffect();
     enhanceScrollAnimations();
     console.log('✅ All skill animations initialized!');
+    
+    // CRITICAL: Initialize mobile-specific features
+    console.log('📱 Starting mobile features initialization...');
+    initMobileMenuClose();
+    initMobile3DFallback();
+    initMobileSectionIndicators();
+    console.log('✅ Mobile features initialized!');
+    
+    // Initialize cursor effects (desktop only)
+    if (window.innerWidth > 768) {
+        new CursorEffects();
+    }
 });
 
 // Interactive Cursor Effects
@@ -1780,7 +1792,247 @@ function initSimpleNavigation() {
         });
     });
     
+    // Make scrollToSection globally accessible
+    window.scrollToSection = scrollToSection;
+    
     console.log('✅ SIMPLE navigation system setup complete!');
     console.log('🎯 All navigation should now work perfectly!');
     console.log('🧭 Test both header nav and side indicators!');
+}
+
+// Mobile Menu Toggle Function
+function toggleMobileMenu() {
+    const navMenu = document.getElementById('navMenu');
+    const mobileToggle = document.querySelector('.mobile-menu-toggle');
+    
+    if (navMenu && mobileToggle) {
+        navMenu.classList.toggle('active');
+        mobileToggle.classList.toggle('active');
+        
+        // Prevent body scroll when menu is open
+        if (navMenu.classList.contains('active')) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'auto';
+        }
+    }
+}
+
+// Close mobile menu when clicking outside
+function initMobileMenuClose() {
+    document.addEventListener('click', (e) => {
+        const navMenu = document.getElementById('navMenu');
+        const mobileToggle = document.querySelector('.mobile-menu-toggle');
+        
+        if (navMenu && mobileToggle) {
+            // If menu is open and click is outside menu and toggle button
+            if (navMenu.classList.contains('active') && 
+                !navMenu.contains(e.target) && 
+                !mobileToggle.contains(e.target)) {
+                navMenu.classList.remove('active');
+                mobileToggle.classList.remove('active');
+                document.body.style.overflow = 'auto';
+            }
+        }
+    });
+    
+    // Close menu when nav link is clicked
+    const navLinks = document.querySelectorAll('.nav-link');
+    navLinks.forEach(link => {
+        link.addEventListener('click', () => {
+            const navMenu = document.getElementById('navMenu');
+            const mobileToggle = document.querySelector('.mobile-menu-toggle');
+            
+            if (navMenu && mobileToggle) {
+                navMenu.classList.remove('active');
+                mobileToggle.classList.remove('active');
+                document.body.style.overflow = 'auto';
+            }
+        });
+    });
+}
+
+// Mobile and 3D Detection - Ultra Conservative Approach
+function initMobile3DFallback() {
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const isVeryLowEndDevice = navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 2;
+    const mobile3DFallback = document.getElementById('mobile3DFallback');
+    const splineViewer = document.getElementById('splineViewer');
+    
+    // Check screen size - only tiny screens get fallback
+    const screenWidth = window.innerWidth;
+    const isTinyScreen = screenWidth <= 280; // Even more conservative
+    
+    console.log('🔍 Device Detection:', {
+        isMobile,
+        isVeryLowEndDevice,
+        hardwareConcurrency: navigator.hardwareConcurrency,
+        screenWidth: window.innerWidth,
+        isTinyScreen,
+        userAgent: navigator.userAgent
+    });
+    
+    // Function to show mobile fallback
+    function showMobileFallback() {
+        if (splineViewer) splineViewer.style.display = 'none';
+        if (mobile3DFallback) {
+            mobile3DFallback.style.display = 'block';
+            console.log('📱 Showing mobile 3D fallback');
+        }
+    }
+    
+    // Function to show Spline viewer (default)
+    function showSplineViewer() {
+        if (mobile3DFallback) mobile3DFallback.style.display = 'none';
+        if (splineViewer) {
+            splineViewer.style.display = 'block';
+            console.log('🌟 Showing Spline 3D viewer');
+        }
+    }
+    
+    // ULTRA CONSERVATIVE Decision logic - Spline viewer almost always
+    if (isTinyScreen && isMobile && isVeryLowEndDevice) {
+        // Only show fallback on tiny screens + mobile + very low-end devices
+        console.log('🔄 Showing fallback: tiny screen + mobile + low-end device');
+        showMobileFallback();
+    } else {
+        // Show Spline viewer by default on ALL other cases (desktop, tablets, most mobiles)
+        console.log('🌟 Showing Spline viewer - desktop/tablet/modern mobile');
+        console.log('🚫 Fallback will NEVER activate automatically on this device type');
+        showSplineViewer();
+        
+        // Only add timeout for mobile devices with tiny screens, NEVER for desktop
+        if (splineViewer && isMobile && isTinyScreen) {
+            console.log('⏰ Adding mobile timeout for tiny screen mobile device');
+            let splineLoadTimeout = setTimeout(() => {
+                console.log('⚠️ Tiny mobile Spline viewer took too long, switching to fallback');
+                showMobileFallback();
+            }, 8000); // 8 second timeout only for tiny mobile
+            
+            // Clear timeout if Spline loads successfully
+            splineViewer.addEventListener('load', () => {
+                clearTimeout(splineLoadTimeout);
+                console.log('✅ Spline viewer loaded successfully on mobile');
+            });
+            
+            splineViewer.addEventListener('error', () => {
+                clearTimeout(splineLoadTimeout);
+                console.log('❌ Mobile Spline viewer failed to load, showing fallback');
+                showMobileFallback();
+            });
+        } else if (splineViewer) {
+            // Desktop/tablet/modern mobile: NO timeout, just error handling
+            console.log('🖥️ Desktop/tablet/modern mobile - Spline viewer with NO timeout');
+            splineViewer.addEventListener('error', () => {
+                console.log('❌ Spline viewer error detected, but keeping it (no fallback)');
+                // Don't switch to fallback - let Spline handle its own loading
+            });
+        }
+    }
+    
+    // Handle window resize - only switch on extreme size changes
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(() => {
+            const newScreenWidth = window.innerWidth;
+            const newIsTinyScreen = newScreenWidth <= 280;
+            
+            // Only switch if crossing the tiny screen threshold AND it's a mobile device
+            if (newIsTinyScreen !== isTinyScreen && isMobile) {
+                if (newIsTinyScreen && isVeryLowEndDevice) {
+                    console.log('📱 Switched to tiny screen + mobile + low-end, showing fallback');
+                    showMobileFallback();
+                } else {
+                    console.log('🌟 Switched away from tiny screen, showing Spline viewer');
+                    showSplineViewer();
+                }
+            }
+        }, 500);
+    });
+}
+
+// Enhanced Section Indicators for Mobile
+function initMobileSectionIndicators() {
+    const indicators = document.querySelectorAll('.indicator');
+    const sections = [
+        { id: 'home', element: document.querySelector('.hero-main') },
+        { id: 'about', element: document.querySelector('.about-section') },
+        { id: 'skills', element: document.getElementById('skills') },
+        { id: 'experience', element: document.getElementById('experience') },
+        { id: 'projects', element: document.getElementById('projects') },
+        { id: 'education', element: document.getElementById('education') },
+        { id: 'contact', element: document.getElementById('contact') }
+    ];
+    
+    // Make sure indicators work on mobile
+    indicators.forEach(indicator => {
+        const sectionId = indicator.getAttribute('data-section');
+        
+        // Remove existing listeners
+        indicator.onclick = null;
+        
+        // Add click listener with better mobile support
+        indicator.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            console.log(`📱 Mobile indicator clicked: ${sectionId}`);
+            scrollToSection(sectionId);
+            
+            // Visual feedback for mobile
+            indicator.style.transform = 'scale(1.1)';
+            setTimeout(() => {
+                indicator.style.transform = '';
+            }, 200);
+        });
+        
+        // Touch support
+        indicator.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            indicator.style.transform = 'scale(1.05)';
+        });
+        
+        indicator.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            indicator.style.transform = '';
+            const sectionId = indicator.getAttribute('data-section');
+            scrollToSection(sectionId);
+        });
+    });
+    
+    // Update active indicator on scroll - mobile optimized
+    let scrollTimeout;
+    window.addEventListener('scroll', () => {
+        clearTimeout(scrollTimeout);
+        scrollTimeout = setTimeout(() => {
+            updateMobileActiveIndicator(sections, indicators);
+        }, 100);
+    });
+}
+
+function updateMobileActiveIndicator(sections, indicators) {
+    const headerHeight = document.querySelector('.modern-header')?.offsetHeight || 70;
+    const scrollPos = window.scrollY + headerHeight + 100;
+    
+    let currentSection = 'home';
+    
+    sections.forEach(section => {
+        if (section.element) {
+            const sectionTop = section.element.offsetTop;
+            const sectionHeight = section.element.offsetHeight;
+            
+            if (scrollPos >= sectionTop && scrollPos < sectionTop + sectionHeight) {
+                currentSection = section.id;
+            }
+        }
+    });
+    
+    // Update indicators
+    indicators.forEach(indicator => {
+        indicator.classList.remove('active');
+        if (indicator.getAttribute('data-section') === currentSection) {
+            indicator.classList.add('active');
+        }
+    });
 } 
