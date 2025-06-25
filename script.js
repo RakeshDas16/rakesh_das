@@ -1890,63 +1890,40 @@ function initMobile3DFallback() {
         }
     }
     
-    // ULTRA CONSERVATIVE Decision logic - Spline viewer almost always
-    if (isTinyScreen && isMobile && isVeryLowEndDevice) {
-        // Only show fallback on tiny screens + mobile + very low-end devices
-        console.log('🔄 Showing fallback: tiny screen + mobile + low-end device');
+    // MOBILE-FIRST Decision logic - Prioritize mobile experience
+    if (isMobile) {
+        // ALL mobile devices get fallback by default to prevent blackout
+        console.log('📱 Mobile device detected - showing CSS fallback for better performance');
         showMobileFallback();
     } else {
-        // Show Spline viewer by default on ALL other cases (desktop, tablets, most mobiles)
-        console.log('🌟 Showing Spline viewer - desktop/tablet/modern mobile');
-        console.log('🚫 Fallback will NEVER activate automatically on this device type');
+        // Desktop/laptop only gets Spline viewer
+        console.log('🖥️ Desktop device detected - showing Spline 3D viewer');
+        console.log('🚫 Fallback will NEVER activate on desktop');
         showSplineViewer();
         
-        // Only add timeout for mobile devices with tiny screens, NEVER for desktop
-        if (splineViewer && isMobile && isTinyScreen) {
-            console.log('⏰ Adding mobile timeout for tiny screen mobile device');
-            let splineLoadTimeout = setTimeout(() => {
-                console.log('⚠️ Tiny mobile Spline viewer took too long, switching to fallback');
-                showMobileFallback();
-            }, 8000); // 8 second timeout only for tiny mobile
-            
-            // Clear timeout if Spline loads successfully
-            splineViewer.addEventListener('load', () => {
-                clearTimeout(splineLoadTimeout);
-                console.log('✅ Spline viewer loaded successfully on mobile');
-            });
-            
+        // Desktop: Only listen for actual errors, no timeout
+        if (splineViewer) {
             splineViewer.addEventListener('error', () => {
-                clearTimeout(splineLoadTimeout);
-                console.log('❌ Mobile Spline viewer failed to load, showing fallback');
-                showMobileFallback();
-            });
-        } else if (splineViewer) {
-            // Desktop/tablet/modern mobile: NO timeout, just error handling
-            console.log('🖥️ Desktop/tablet/modern mobile - Spline viewer with NO timeout');
-            splineViewer.addEventListener('error', () => {
-                console.log('❌ Spline viewer error detected, but keeping it (no fallback)');
-                // Don't switch to fallback - let Spline handle its own loading
+                console.log('❌ Desktop Spline viewer error detected, but keeping it');
+                // Don't switch to fallback on desktop - let Spline handle its own loading
             });
         }
     }
     
-    // Handle window resize - only switch on extreme size changes
+    // Handle window resize - maintain mobile vs desktop distinction
     let resizeTimeout;
     window.addEventListener('resize', () => {
         clearTimeout(resizeTimeout);
         resizeTimeout = setTimeout(() => {
-            const newScreenWidth = window.innerWidth;
-            const newIsTinyScreen = newScreenWidth <= 280;
+            // Re-detect if we're on mobile (shouldn't change, but just in case)
+            const stillMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
             
-            // Only switch if crossing the tiny screen threshold AND it's a mobile device
-            if (newIsTinyScreen !== isTinyScreen && isMobile) {
-                if (newIsTinyScreen && isVeryLowEndDevice) {
-                    console.log('📱 Switched to tiny screen + mobile + low-end, showing fallback');
-                    showMobileFallback();
-                } else {
-                    console.log('🌟 Switched away from tiny screen, showing Spline viewer');
-                    showSplineViewer();
-                }
+            if (stillMobile) {
+                console.log('📱 Resize: Still mobile - keeping CSS fallback');
+                showMobileFallback();
+            } else {
+                console.log('🖥️ Resize: Still desktop - keeping Spline viewer');
+                showSplineViewer();
             }
         }, 500);
     });
